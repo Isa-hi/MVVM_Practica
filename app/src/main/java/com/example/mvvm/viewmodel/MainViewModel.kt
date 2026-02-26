@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.mvvm.model.DataRepository
 
-// Debe heredar de la clase ViewModel nativa de Android.
+// Hereda de la clase ViewModel nativa de Android
 class MainViewModel : ViewModel() {
 
     private val repository = DataRepository()
@@ -25,11 +25,11 @@ class MainViewModel : ViewModel() {
         val isUserBored = repository.getSimulatedSensorData()
 
         if (isUserBored) {
-            // Actualizamos el observable, desencadenando la reacción automática de la Vista.
+            // Actualizamos el observable, desencadenando la reacción automática de la Vista
             _uiState.value = LearningState(
                 isBored = true,
                 message = "¡Detectamos distracción! Cambiando a un video interactivo...",
-                themeColor = "#FFDDDD" // Color diferente para el nuevo tema (ej. rojo claro)
+                themeColor = "#FFDDDD"
             )
         }
     }
