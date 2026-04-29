@@ -1,4 +1,4 @@
-package com.example.mvvm.model
+package com.example.focusflow.model
 
 // Creen una clase simulada que devuelva la información requerida por el proceso.
 class DataRepository {

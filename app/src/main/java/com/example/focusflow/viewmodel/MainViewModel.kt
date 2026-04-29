@@ -1,9 +1,9 @@
-package com.example.mvvm.viewmodel
+package com.example.focusflow.viewmodel
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.mvvm.model.DataRepository
+import com.example.focusflow.model.DataRepository
 
 // Hereda de la clase ViewModel nativa de Android
 class MainViewModel : ViewModel() {
