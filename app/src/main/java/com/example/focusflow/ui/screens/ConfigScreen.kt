@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.focusflow.navigation.Routes
 
 @Composable
 fun ConfigScreen(navController: NavController) {

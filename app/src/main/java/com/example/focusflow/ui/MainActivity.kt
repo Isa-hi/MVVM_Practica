@@ -1,30 +1,30 @@
-package com.example.focusflow.ui
+package com.example.focusflow
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.View
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.Observer
-import com.example.focusflow.R
-import com.example.focusflow.viewmodel.MainViewModel
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import com.example.focusflow.navigation.FocusFlowNavigation
+import com.example.focusflow.ui.theme.FocusFlowTheme // Asegúrate de que el nombre coincida con tu archivo de tema
 
 class MainActivity : ComponentActivity() {
-    fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // setContent define qué es lo que se va a dibujar en la pantalla
         setContent {
-            YourAppTheme { // Usa el tema de tu proyecto
+            // Aplicamos el tema visual general de tu app
+            FocusFlowTheme {
+                // Surface es el "lienzo" base de Material Design
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    // Llamamos a nuestro enrutador principal, el cual se encargará
+                    // de decidir qué pantalla mostrar (empezando por ConfigScreen)
                     FocusFlowNavigation()
                 }
             }
