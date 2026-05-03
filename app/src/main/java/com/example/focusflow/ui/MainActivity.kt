@@ -1,4 +1,4 @@
-package com.example.focusflow
+package com.example.focusflow.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
