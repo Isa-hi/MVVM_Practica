@@ -1,12 +1,16 @@
 package com.example.focusflow.ui.screens
 
+import android.content.Context
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
@@ -17,8 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavController
 import com.example.focusflow.navigation.Routes
 import kotlinx.coroutines.delay
@@ -27,7 +36,7 @@ import kotlinx.coroutines.delay
 fun SessionScreen(navController: NavController, tema: String) {
 
     // ── Estado del temporizador ───────────────────────────────
-    val duracionInicialSeg = 45 * 60               // 45 minutos por defecto
+    val duracionInicialSeg = 45 * 60
     var segundosRestantes by remember { mutableStateOf(duracionInicialSeg) }
     var isRunning by remember { mutableStateOf(true) }
     var showInterventionDialog by remember { mutableStateOf(false) }
@@ -38,21 +47,17 @@ fun SessionScreen(navController: NavController, tema: String) {
             delay(1000L)
             segundosRestantes--
         }
-        // Si llegó a cero, detener
         if (segundosRestantes == 0) isRunning = false
     }
 
-    // ── Animación del anillo de progreso ─────────────────────
     val progreso = segundosRestantes.toFloat() / duracionInicialSeg.toFloat()
     val progresoAnimado by animateFloatAsState(
         targetValue = progreso,
-        animationSpec = tween(durationMillis = 800, easing = LinearEasing),
+        animationSpec = tween(800, easing = LinearEasing),
         label = "progreso"
     )
 
-    val tiempoEstudiado = ((duracionInicialSeg - segundosRestantes) / 60)
-
-    // ── Formato mm:ss ─────────────────────────────────────────
+    val tiempoEstudiado = (duracionInicialSeg - segundosRestantes) / 60
     val minutos = segundosRestantes / 60
     val segundos = segundosRestantes % 60
     val tiempoFormateado = "%02d:%02d".format(minutos, segundos)
@@ -60,7 +65,7 @@ fun SessionScreen(navController: NavController, tema: String) {
     val gradient = Brush.verticalGradient(
         colors = listOf(
             MaterialTheme.colorScheme.background,
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
         )
     )
 
@@ -72,7 +77,7 @@ fun SessionScreen(navController: NavController, tema: String) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 28.dp),
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -80,75 +85,55 @@ fun SessionScreen(navController: NavController, tema: String) {
             // ── Encabezado ────────────────────────────────────
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 56.dp)
+                modifier = Modifier.padding(top = 52.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(7.dp)
                             .clip(CircleShape)
-                            .background(if (isRunning) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline)
+                            .background(
+                                if (isRunning) MaterialTheme.colorScheme.tertiary
+                                else MaterialTheme.colorScheme.outline
+                            )
                     )
                     Text(
                         text = if (isRunning) "Sesión activa" else "Pausado",
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (isRunning) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline
+                        color = if (isRunning) MaterialTheme.colorScheme.tertiary
+                        else MaterialTheme.colorScheme.outline
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = tema,
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CameraAlt,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "Monitoreo activo",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                    )
-                }
             }
 
-            // ── Reloj circular con temporizador ───────────────
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(260.dp)
-            ) {
-                // Anillo de fondo
+            // ── Reloj circular ────────────────────────────────
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(240.dp)) {
                 CircularProgressIndicator(
                     progress = { 1f },
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surfaceVariant,
-                    strokeWidth = 10.dp,
+                    strokeWidth = 9.dp,
                     strokeCap = StrokeCap.Round
                 )
-                // Anillo de progreso real
                 CircularProgressIndicator(
                     progress = { progresoAnimado },
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.primary,
-                    strokeWidth = 10.dp,
+                    strokeWidth = 9.dp,
                     strokeCap = StrokeCap.Round
                 )
-                // Texto central
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = tiempoFormateado,
@@ -158,86 +143,113 @@ fun SessionScreen(navController: NavController, tema: String) {
                     Text(
                         text = "restantes",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f)
                     )
                 }
             }
 
-            // ── Controles y acciones ──────────────────────────
+            // ── Vista de la cámara frontal ────────────────────
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    CameraPreview(modifier = Modifier.fillMaxSize())
+
+                    // Badge "Monitoreando"
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(10.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.tertiary)
+                        )
+                        Text(
+                            text = "Monitoreando",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    // ── Botón sutil "Simular distracción" ─────
+                    // Pequeño ícono discreto en la esquina inferior derecha
+                    TextButton(
+                        onClick = { showInterventionDialog = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "simular",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                        )
+                    }
+                }
+            }
+
+            // ── Controles ─────────────────────────────────────
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(bottom = 48.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.padding(bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
-                // Fila de acciones secundarias
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Botón Pausar / Reanudar
                     OutlinedButton(
                         onClick = { isRunning = !isRunning },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        ),
-                        border = ButtonDefaults.outlinedButtonBorder
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(14.dp)
                     ) {
                         Icon(
-                            imageVector = if (isRunning) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            imageVector = if (isRunning) Icons.Rounded.Pause
+                            else Icons.Rounded.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(17.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = if (isRunning) "Pausar" else "Reanudar",
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
 
-                    // Botón Simular cansancio
-                    OutlinedButton(
-                        onClick = { showInterventionDialog = true },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
+                    Button(
+                        onClick = {
+                            isRunning = false
+                            navController.navigate(
+                                Routes.Results.createRoute(tema, tiempoEstudiado.toString())
+                            )
+                        },
+                        modifier = Modifier.weight(1f).height(50.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.secondary
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("🧘 Detectar", style = MaterialTheme.typography.labelLarge)
-                    }
-                }
-
-                // Botón Terminar sesión
-                Button(
-                    onClick = {
-                        isRunning = false
-                        navController.navigate(
-                            Routes.Results.createRoute(tema, tiempoEstudiado.toString())
+                        Icon(
+                            imageVector = Icons.Rounded.Stop,
+                            contentDescription = null,
+                            modifier = Modifier.size(17.dp)
                         )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Stop,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Terminar Sesión", style = MaterialTheme.typography.labelLarge)
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text("Terminar", style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
         }
@@ -246,9 +258,7 @@ fun SessionScreen(navController: NavController, tema: String) {
         if (showInterventionDialog) {
             AlertDialog(
                 onDismissRequest = { showInterventionDialog = false },
-                icon = {
-                    Text("🧘", style = MaterialTheme.typography.headlineMedium)
-                },
+                icon = { Text("🧘", style = MaterialTheme.typography.headlineMedium) },
                 title = {
                     Text(
                         text = "Pareces cansado",
@@ -258,7 +268,7 @@ fun SessionScreen(navController: NavController, tema: String) {
                 },
                 text = {
                     Text(
-                        text = "¿Quieres dedicar 5 minutos más o prefieres pausar ahora para estirarte?",
+                        text = "¿Quieres 5 minutos más o prefieres pausar ahora para estirarte?",
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
@@ -288,4 +298,53 @@ fun SessionScreen(navController: NavController, tema: String) {
             )
         }
     }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Composable de preview de cámara con CameraX
+// ─────────────────────────────────────────────────────────────
+@Composable
+private fun CameraPreview(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    val previewView = remember {
+        PreviewView(context).apply {
+            scaleType = PreviewView.ScaleType.FILL_CENTER
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        startCamera(context, lifecycleOwner, previewView)
+    }
+
+    AndroidView(
+        factory = { previewView },
+        modifier = modifier
+    )
+}
+
+private fun startCamera(
+    context: Context,
+    lifecycleOwner: LifecycleOwner,
+    previewView: PreviewView
+) {
+    val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+    cameraProviderFuture.addListener({
+        val cameraProvider = cameraProviderFuture.get()
+
+        val preview = Preview.Builder().build().also {
+            it.setSurfaceProvider(previewView.surfaceProvider)
+        }
+
+        // Usamos la cámara frontal para monitorear al usuario
+        val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+
+        try {
+            cameraProvider.unbindAll()
+            cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }, ContextCompat.getMainExecutor(context))
 }
