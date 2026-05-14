@@ -1,5 +1,6 @@
 package com.example.focusflow.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -27,7 +28,6 @@ fun ConfigScreen(navController: NavController) {
     var tema by remember { mutableStateOf("") }
     var metaTiempo by remember { mutableStateOf("") }
 
-    // El botón se habilita cuando hay tema; si no hay meta de tiempo usamos 25 min (Pomodoro)
     val metaTiempoValida = metaTiempo.toIntOrNull()?.takeIf { it > 0 }
     val metaTiempoFinal = metaTiempoValida ?: 25
 
@@ -51,7 +51,6 @@ fun ConfigScreen(navController: NavController) {
             verticalArrangement = Arrangement.Center
         ) {
 
-            // ── Logo / Ícono central ──────────────────────────────
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -75,6 +74,7 @@ fun ConfigScreen(navController: NavController) {
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
+
             Text(
                 text = "Configura tu sesión de estudio",
                 style = MaterialTheme.typography.bodyMedium,
@@ -84,7 +84,6 @@ fun ConfigScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // ── Tarjeta de configuración ──────────────────────────
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -108,7 +107,6 @@ fun ConfigScreen(navController: NavController) {
                     PremiumTextField(
                         value = metaTiempo,
                         onValueChange = { metaTiempo = it },
-                        // Muestra el fallback de 25 min como hint cuando el campo está vacío
                         label = "Meta de tiempo (min) — vacío = 25 min",
                         leadingIcon = Icons.Rounded.Schedule,
                         keyboardType = KeyboardType.Number
@@ -118,13 +116,14 @@ fun ConfigScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // ── Botón principal ───────────────────────────────────
             Button(
                 onClick = {
                     if (tema.isNotBlank()) {
-                        // Pasamos metaTiempoFinal (ya validado) como String a la ruta
                         navController.navigate(
-                            Routes.Rationale.createRoute(tema, metaTiempoFinal.toString())
+                            Routes.Rationale.createRoute(
+                                tema,
+                                metaTiempoFinal.toString()
+                            )
                         )
                     }
                 },
@@ -141,8 +140,33 @@ fun ConfigScreen(navController: NavController) {
             ) {
                 Text(
                     text = "Comenzar",
-                    style = MaterialTheme.typography.labelLarge,
-                    letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = {
+                    val prefs = navController.context.getSharedPreferences(
+                        "focusflow_prefs",
+                        Context.MODE_PRIVATE
+                    )
+
+                    prefs.edit().clear().apply()
+
+                    navController.navigate(Routes.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text(
+                    text = "Cerrar sesión",
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
         }
@@ -173,9 +197,9 @@ private fun PremiumTextField(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor   = MaterialTheme.colorScheme.primary,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            focusedLabelColor    = MaterialTheme.colorScheme.primary,
+            focusedLabelColor = MaterialTheme.colorScheme.primary
         )
     )
 }
