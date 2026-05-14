@@ -27,6 +27,10 @@ fun ConfigScreen(navController: NavController) {
     var tema by remember { mutableStateOf("") }
     var metaTiempo by remember { mutableStateOf("") }
 
+    // El botón se habilita cuando hay tema; si no hay meta de tiempo usamos 25 min (Pomodoro)
+    val metaTiempoValida = metaTiempo.toIntOrNull()?.takeIf { it > 0 }
+    val metaTiempoFinal = metaTiempoValida ?: 25
+
     val gradient = Brush.verticalGradient(
         colors = listOf(
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
@@ -104,7 +108,8 @@ fun ConfigScreen(navController: NavController) {
                     PremiumTextField(
                         value = metaTiempo,
                         onValueChange = { metaTiempo = it },
-                        label = "Meta de tiempo (minutos)",
+                        // Muestra el fallback de 25 min como hint cuando el campo está vacío
+                        label = "Meta de tiempo (min) — vacío = 25 min",
                         leadingIcon = Icons.Rounded.Schedule,
                         keyboardType = KeyboardType.Number
                     )
@@ -116,11 +121,14 @@ fun ConfigScreen(navController: NavController) {
             // ── Botón principal ───────────────────────────────────
             Button(
                 onClick = {
-                    if (tema.isNotEmpty()) {
-                        navController.navigate(Routes.Rationale.createRoute(tema))
+                    if (tema.isNotBlank()) {
+                        // Pasamos metaTiempoFinal (ya validado) como String a la ruta
+                        navController.navigate(
+                            Routes.Rationale.createRoute(tema, metaTiempoFinal.toString())
+                        )
                     }
                 },
-                enabled = tema.isNotEmpty(),
+                enabled = tema.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

@@ -30,18 +30,29 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavController
 import com.example.focusflow.navigation.Routes
+import com.example.focusflow.navigation.decodeFromNav
 import kotlinx.coroutines.delay
 
 @Composable
-fun SessionScreen(navController: NavController, tema: String) {
+fun SessionScreen(navController: NavController, tema: String, metaTiempo: String) {
 
-    // ── Estado del temporizador ───────────────────────────────
-    val duracionInicialSeg = 45 * 60
+    val temaDecoded = tema.decodeFromNav()
+
+    // ── Duración inicial a partir del parámetro real de configuración ─
+    // metaTiempo viene en minutos; lo convertimos a segundos.
+    // Si por algún motivo el valor no es válido usamos 25 min como fallback.
+    val duracionInicialSeg = remember(metaTiempo) {
+        (metaTiempo.toIntOrNull()?.takeIf { it > 0 } ?: 25) * 60
+    }
+
     var segundosRestantes by remember { mutableStateOf(duracionInicialSeg) }
     var isRunning by remember { mutableStateOf(true) }
     var showInterventionDialog by remember { mutableStateOf(false) }
 
-    // ── Temporizador en tiempo real ───────────────────────────
+    // ── Contador de pausas (cada vez que el usuario pausa manualmente) ─
+    var numeroPausas by remember { mutableStateOf(0) }
+
+    // ── Temporizador en tiempo real ───────────────────────────────
     LaunchedEffect(isRunning) {
         while (isRunning && segundosRestantes > 0) {
             delay(1000L)
@@ -68,6 +79,19 @@ fun SessionScreen(navController: NavController, tema: String) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
         )
     )
+
+    // Función auxiliar para terminar la sesión y navegar a resultados
+    fun terminarSesion() {
+        isRunning = false
+        navController.navigate(
+            Routes.Results.createRoute(
+                tema          = tema,
+                tiempoEstudiado = tiempoEstudiado.toString(),
+                metaTiempo    = metaTiempo,
+                pausas        = numeroPausas.toString()
+            )
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -109,7 +133,7 @@ fun SessionScreen(navController: NavController, tema: String) {
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = tema,
+                    text = temaDecoded,
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center
@@ -183,8 +207,7 @@ fun SessionScreen(navController: NavController, tema: String) {
                         )
                     }
 
-                    // ── Botón sutil "Simular distracción" ─────
-                    // Pequeño ícono discreto en la esquina inferior derecha
+                    // Botón sutil "Simular distracción"
                     TextButton(
                         onClick = { showInterventionDialog = true },
                         modifier = Modifier
@@ -212,8 +235,14 @@ fun SessionScreen(navController: NavController, tema: String) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedButton(
-                        onClick = { isRunning = !isRunning },
-                        modifier = Modifier.weight(1f).height(50.dp),
+                        onClick = {
+                            // Incrementa el contador solo al pausar (no al reanudar)
+                            if (isRunning) numeroPausas++
+                            isRunning = !isRunning
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Icon(
@@ -230,13 +259,10 @@ fun SessionScreen(navController: NavController, tema: String) {
                     }
 
                     Button(
-                        onClick = {
-                            isRunning = false
-                            navController.navigate(
-                                Routes.Results.createRoute(tema, tiempoEstudiado.toString())
-                            )
-                        },
-                        modifier = Modifier.weight(1f).height(50.dp),
+                        onClick = { terminarSesion() },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
@@ -278,10 +304,7 @@ fun SessionScreen(navController: NavController, tema: String) {
                     Button(
                         onClick = {
                             showInterventionDialog = false
-                            isRunning = false
-                            navController.navigate(
-                                Routes.Results.createRoute(tema, tiempoEstudiado.toString())
-                            )
+                            terminarSesion()
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
@@ -337,7 +360,6 @@ private fun startCamera(
             it.setSurfaceProvider(previewView.surfaceProvider)
         }
 
-        // Usamos la cámara frontal para monitorear al usuario
         val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
         try {

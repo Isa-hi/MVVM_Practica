@@ -1,14 +1,32 @@
 package com.example.focusflow.navigation
 
 sealed class Routes(val route: String) {
-    object Config : Routes("config_screen")
-    object Rationale : Routes("rationale_screen/{tema}") {
-        fun createRoute(tema: String) = "rationale_screen/$tema"
+
+    object Config : Routes("config")
+
+    // Rationale recibe tema + metaTiempo para pasarlo a Session
+    object Rationale : Routes("rationale/{tema}/{metaTiempo}") {
+        fun createRoute(tema: String, metaTiempo: String) =
+            "rationale/${tema.encodeForNav()}/${metaTiempo.encodeForNav()}"
     }
-    object Session : Routes("session_screen/{tema}") {
-        fun createRoute(tema: String) = "session_screen/$tema"
+
+    // Session recibe tema + metaTiempo para inicializar el temporizador
+    object Session : Routes("session/{tema}/{metaTiempo}") {
+        fun createRoute(tema: String, metaTiempo: String) =
+            "session/${tema.encodeForNav()}/${metaTiempo.encodeForNav()}"
     }
-    object Results : Routes("results_screen/{tema}/{tiempoEstudiado}") {
-        fun createRoute(tema: String, tiempoEstudiado: String) = "results_screen/$tema/$tiempoEstudiado"
+
+    // Results recibe tema + tiempoEstudiado + metaTiempo + pausas para calcular calidad
+    object Results : Routes("results/{tema}/{tiempoEstudiado}/{metaTiempo}/{pausas}") {
+        fun createRoute(
+            tema: String,
+            tiempoEstudiado: String,
+            metaTiempo: String,
+            pausas: String
+        ) = "results/${tema.encodeForNav()}/$tiempoEstudiado/$metaTiempo/$pausas"
     }
 }
+
+// Evita que espacios o caracteres especiales rompan la URL de navegación
+private fun String.encodeForNav() = this.replace(" ", "_").replace("/", "-")
+fun String.decodeFromNav() = this.replace("_", " ").replace("-", "/")

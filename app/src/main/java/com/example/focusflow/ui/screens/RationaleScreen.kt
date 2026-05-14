@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.focusflow.navigation.Routes
+import com.example.focusflow.navigation.decodeFromNav
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -28,25 +29,34 @@ import com.google.accompanist.permissions.shouldShowRationale
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun RationaleScreen(navController: NavController, tema: String) {
+fun RationaleScreen(navController: NavController, tema: String, metaTiempo: String) {
+
+    val temaDecoded = tema.decodeFromNav()
 
     // ── Estado real del permiso de cámara ─────────────────────
     val cameraPermissionState = rememberPermissionState(
         android.Manifest.permission.CAMERA
     )
 
-    // Si el permiso ya estaba concedido, navegar directo a la sesión
+    // Rastrea si el usuario ya tocó "Permitir" al menos una vez en esta pantalla.
+    // Es necesario porque en el PRIMER lanzamiento shouldShowRationale también es false
+    // (igual que tras denegación permanente), por lo que no podemos distinguirlos
+    // sin este flag local.
+    var haSolicitadoUnaVez by remember { mutableStateOf(false) }
+
+    // Si el permiso ya estaba concedido (o se concedió en el diálogo), navegamos
     LaunchedEffect(cameraPermissionState.status) {
         if (cameraPermissionState.status.isGranted) {
-            navController.navigate(Routes.Session.createRoute(tema)) {
-                popUpTo(Routes.Rationale.createRoute(tema)) { inclusive = true }
+            navController.navigate(Routes.Session.createRoute(tema, metaTiempo)) {
+                popUpTo(Routes.Rationale.createRoute(tema, metaTiempo)) { inclusive = true }
             }
         }
     }
 
-    // Permiso denegado permanentemente (usuario marcó "No preguntar más")
+    // Denegación permanente solo aplica DESPUÉS de haber solicitado al menos una vez
     val permisoDenegadoPermanentemente =
-        !cameraPermissionState.status.isGranted &&
+        haSolicitadoUnaVez &&
+                !cameraPermissionState.status.isGranted &&
                 !cameraPermissionState.status.shouldShowRationale
 
     val gradient = Brush.verticalGradient(
@@ -102,7 +112,7 @@ fun RationaleScreen(navController: NavController, tema: String) {
                         text = if (denegado)
                             "Activa el permiso en Ajustes → Aplicaciones → FocusFlow"
                         else
-                            "Para tu sesión de «$tema»",
+                            "Para tu sesión de «$temaDecoded»",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (denegado)
                             MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
@@ -146,7 +156,8 @@ fun RationaleScreen(navController: NavController, tema: String) {
             Button(
                 onClick = {
                     if (!permisoDenegadoPermanentemente) {
-                        // Lanza el diálogo nativo del sistema Android
+                        // Marcamos que ya se intentó solicitar antes de lanzar el diálogo
+                        haSolicitadoUnaVez = true
                         cameraPermissionState.launchPermissionRequest()
                     }
                 },
